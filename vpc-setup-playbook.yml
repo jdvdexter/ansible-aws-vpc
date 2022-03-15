@@ -23,6 +23,7 @@
         az: "{{zone1}}"
         state: "{{state}}"
         cidr: "{{PubSub1Cidr}}"
+        map_public: yes
         resource_tags:
           Name: Devops_PubSub1
       register: pubsub1_out
