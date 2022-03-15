@@ -1,0 +1,58 @@
+---
+- name: Bastion Host Setup
+  hosts: localhost
+  connection: local
+  gather_facts: False
+  tasks:
+  - name: Importing VPC Setup Variable
+    include_vars: vars/var_output
+
+  - name: Importing Bastion Setup Variable
+    include_vars: vars/bastion-setup
+
+  - name: Creating ec2 key
+    ec2_key:
+      name: devops-key
+      region: "{{region}}"
+    register: key_out
+
+  - name: Save private key into bastion-key.pem
+    copy:
+      content: "{{key_out.key.private_key}}"
+      dest: "./bastion-key.pem"
+      mode: 0600
+    when: key_out.changed
+
+  - name: Create SG Bastion Host
+    ec2_group:
+      name: Bastion-host-sg
+      description: Allow port 22 from everywhere and all port within sg
+      region: "{{region}}"
+      vpcid: "{{vpcid}}"
+      rules:
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: "{{myIP}}"
+    register: Bastionsg_out
+
+  - name: Creating Bastion Host
+    ec2:
+      key_name: devops-key
+      region: "{{region}}"
+      instance_type: t2.micro
+      image: "{{bastion_ami}}"
+      wait: yes
+      wait_timeout: 300
+      vpc_subnet_id: "{{pubsub1id}}"
+      instance_tags:
+        Name: "Bastion-Host"
+        Project: Devops
+        Owner: Devops Team
+      exact_count: 1
+      count_tag:
+        Name: "Bastion-Host"
+        Project: Devops
+        Owner: Devops Team
+      group_id: "{{Bastionsg_out.group_id}}"
+    register: BastionHost_out
